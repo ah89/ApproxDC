@@ -1,0 +1,58 @@
+package qcri.ci.utils;
+
+public class OperatorMapping {
+
+	public static String nameToOperator(String name)
+	{
+		if(name.equals("EQ"))
+			return "=";
+		else if(name.equals("IQ"))
+			return "!=";
+		else if(name.equals("GT"))
+			return ">";
+		else if(name.equals("LT"))
+			return "<";
+		else if(name.equals("GTE"))
+			return ">=";
+		else if(name.equals("LTE"))
+			return "<=";
+		else 
+			return null;
+	}
+	public static String operatorToName(String op)
+	{
+		if(op.equals("="))
+			return "EQ";
+		else if(op.equals("!="))
+			return "IQ";
+		else if(op.equals(">"))
+			return "GT";
+		else if(op.equals("<"))
+			return "LT";
+		else if(op.equals(">="))
+			return "GTE";
+		else if(op.equals("<="))
+			return "LTE";
+		else
+			return null;
+	}
+	
+	public static String getReserveName(String name)
+	{
+		if(name.equals("EQ"))
+			return "IQ";
+		else if(name.equals("IQ"))
+			return "EQ";
+		else if(name.equals("GT"))
+			return "LTE";
+		else if(name.equals("LT"))
+			return "GTE";
+		else if(name.equals("GTE"))
+			return "LT";
+		else if(name.equals("LTE"))
+			return "GT";
+		else 
+			return null;
+	}
+	
+}

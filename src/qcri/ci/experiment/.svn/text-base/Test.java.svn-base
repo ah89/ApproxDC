@@ -1,0 +1,80 @@
+package qcri.ci.experiment;
+
+import java.io.*;
+import java.util.ArrayList;
+
+import qcri.ci.ConstraintDiscovery;
+import qcri.ci.FASTDC;
+import qcri.ci.instancedriven.ConstraintMining2;
+import qcri.ci.utils.Config;
+import qcri.ci.utils.FileUtil;
+
+public class Test {
+
+	/**
+	 * @param args
+	 * @throws IOException 
+	 */
+	public static void main(String[] args) throws IOException {
+		
+	
+		//String dataset = "NCvoters";
+		String dataset = "TaxGenerator";
+		//String dataset = "ExpHospital";
+		//String dataset ="SPStock";
+		//String dataset = "Test";
+		//String dataset = "John";
+		//String dataset = "CPU";
+		//ArrayList<Integer> cols = new ArrayList<Integer>();
+		
+		/*cols.add(0);
+		cols.add(1);
+		//cols.add(2);
+		cols.add(3);
+		cols.add(4);
+		cols.add(5);
+		cols.add(6);
+		cols.add(7);
+		cols.add(8);
+		cols.add(9);
+		cols.add(10);
+		cols.add(11);
+		cols.add(12);
+		//cols.add(13);
+		cols.add(14);*/
+		
+		/*for(int i  =0; i < 100; i++)
+		{
+			cols.add(i);
+		}*/
+		
+		//ExpUtils.sampleInputDB(dataset, 100000, cols);
+		//ExpUtils.getInputDB(dataset, 100000, 20);
+		
+		//FileUtil.clearExpReportCSVFile(ExpUtils.head);
+		
+		
+		//ExpUtils.getInputDB(dataset, 10000000, 20);
+		
+		
+		ConstraintDiscovery cd;
+		//Config.noiseTolerance = 0.001;
+		
+		
+		Config.sc = 0;
+		Config.howInit = 1;
+		Config.enableCrossColumn = false;
+		cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,1, 10000);
+		cd.discoverEXCHKS();
+	
+		cd.initHeavyWork(Config.howInit);
+		cd.discover();
+		
+		/*Config.enableCrossColumn = false;
+		FASTDC fastdc = new FASTDC("Experiments/" + dataset + "/" + "inputDB",1000);
+		fastdc.discover();
+		fastdc.dc2File();*/
+	
+	}
+
+}

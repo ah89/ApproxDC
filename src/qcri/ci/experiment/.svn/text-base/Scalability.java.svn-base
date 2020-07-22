@@ -1,0 +1,1106 @@
+package qcri.ci.experiment;
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.*;
+
+import qcri.ci.ConstraintDiscovery;
+import qcri.ci.instancedriven.ConstraintMining2;
+import qcri.ci.utils.Config;
+import qcri.ci.utils.FileUtil;
+import qcri.ci.experiment.*;
+
+public class Scalability {
+
+	/**
+	 * @param args
+	 * @throws IOException 
+	 */
+	public static void main(String[] args) throws IOException {
+		//Execute two passed of pruning algorithm, varying the number of tuples
+		
+		String[] datasets = new String[] {
+				
+				//"ExpHospital",
+				//"TaxGenerator",
+				"SPStock"
+				
+				};
+
+		
+		for(String dataset: datasets)
+		{
+			FileUtil.clearExpReportCSVFile(ExpUtils.head);
+			
+			
+			//Scalability 1
+			//fixNumCols_VaryingNumTuple(dataset);
+			
+			
+			
+			//Scalability 2
+			int totalRounds = 2;
+			for(int round = 1; round <= totalRounds; round++)
+			{
+				FileUtil.clearExpReportCSVFile(ExpUtils.head);
+				
+				//fixNumTuples_VaryingNumPredicates(dataset,round,10000);
+				
+				fixNumTuples_VaryingNumPredicates2(dataset,round,10000);
+				
+			}
+			
+			String[] csvs = new String[]{"fixNumTuples_VaryingNumPredicates_WastedWork",
+					"fixNumTuples_VaryingNumPredicates_DFSTimePerMinimalDC",
+					"fixNumTuples_VaryingNumPredicates_TotalRunningTime",
+					"fixNumTuples_VaryingNumPredicates_NormalizedTimePerMinimalDC",
+					"fixNumTuples_VaryingNumPredicates_NumMinimalDCs",
+					"fixNumTuples_VaryingNumPredicates_DFSTime"
+					};
+			for(String csv: csvs)
+			{
+				Set<String> input = new HashSet<String>();
+				for(int round = 1; round <= totalRounds; round++)
+				{
+					String temp = csv + "_" + round;
+					input.add(temp);
+					
+				}
+				average(dataset, input,csv);
+			}
+			
+			for(String csv: csvs)
+			{
+				for(int round = 1; round <= totalRounds; round++)
+				{
+					String temp = csv + "_" + round;
+					FileUtil.deleteFile(ExpUtils.getExpFolder(dataset) + "/" + temp + ".csv");
+					
+				}
+				
+			}
+		}
+		
+		
+		
+			
+	}
+
+	
+	
+	public static void fixNumCols_VaryingNumTuple(String dataset) throws IOException
+	{
+		
+		//ConstraintMining(String inputDBPath, int initParallel, int mvcParallel, int dynamicOrdering)
+
+		int numCols = 20;
+		Config.enableCrossColumn = false;
+		
+		int[] numTupless = new int[]{400000};
+		//Step1: running the algorithm, writing the stats to ExpReport File
+		for(int numTuples: numTupless)
+		{
+			
+			ExpUtils.getInputDB(dataset,numTuples,numCols);
+			
+			ConstraintDiscovery cd;
+			
+			
+			
+			//MVC Parellel == 3, have more pruning power
+			cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,1,numTuples);
+			cd.initHeavyWork(Config.howInit); cd.discover();
+			
+		}
+		
+		//Step2: Extract the relevant info from global stats info File, and put it in a local file
+		String setting = "fixNumCols_VaryingNumTuple_RunningTime";
+		//String thisHead = "NumOfTuples,Running Time(s)ForFASTDC,Running Time(s)ForFASTDCImproved";
+		String thisHead = "# Tuples,Running Time(s)ForFASTDC";
+		
+		
+		BufferedReader br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		PrintWriter out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		String line = null;
+		int group = thisHead.split(",").length - 1;
+		String[] lines = new String[group];
+		int count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					int numTuples = Double.valueOf(lines[0].split(",")[1]).intValue() ;// / 1000;
+					sb.append(numTuples);//number tuples;
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						sb.append(lines[i].split(",")[3]);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+	}
+	
+
+	
+	public static void fixNumTuples_VaryingNumPredicates(String dataset, int round,int numTuples) throws IOException
+	{
+		
+		//int numcols = 13;
+		ArrayList<Integer> cols = new ArrayList<Integer>();
+		ArrayList<Integer> remaining = new ArrayList<Integer>();
+		if(dataset.equals("TaxGenerator"))
+		{
+			remaining.add(0);
+			remaining.add(1);
+			//remaining.add(2);
+			remaining.add(3);
+			remaining.add(4);
+			remaining.add(5);
+			remaining.add(6);
+			remaining.add(7);
+			remaining.add(8);
+			remaining.add(9);
+			remaining.add(10);
+			remaining.add(11);
+			remaining.add(12);
+			//remaining.add(13);
+			remaining.add(14);
+		}
+		else if(dataset.equals("ExpHospital"))
+		{
+			for(int i = 0; i < 15; i++)
+				remaining.add(i);
+		}
+		else if(dataset.equals("SPStock"))
+		{
+			for(int i = 0; i < 7; i++)
+				remaining.add(i);
+		}
+		
+		
+		
+		
+		int step = 1;
+		int numCols = remaining.size();
+		//Step1: running the algorithm, writing the stats to ExpReport File
+		for(int i = 1; i <= numCols; i += step)
+		{
+			for(int k = 0 ; k < step; k++)
+			{
+				
+				int index = new Random().nextInt(remaining.size());
+				int cur = remaining.get(index);
+				cols.add(cur);
+				remaining.remove(index);
+				
+			}
+			
+			
+			//getInputDB(dataset,numTuples,i);
+			//ExpUtils.genInputDBRandomAttri(dataset,numTuples,cols);
+			ExpUtils.sampleInputDB(dataset, 114900, cols);
+			
+			ConstraintDiscovery cd;
+			
+			cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,1,numTuples);
+			cd.initHeavyWork(Config.howInit); cd.discover();
+			
+			
+			
+			
+			
+		}
+		
+		//Step2: Extract the relevant info from global stats info File, and put it in a local file
+		String setting = "fixNumTuples_VaryingNumPredicates_WastedWork" + "_" + round;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//String thisHead = "NumOfPredicates,Wasted WorkForFASTDC,Wasted WorkForFASTDCImproved";
+		String thisHead = "NumOfPredicates,Wasted WorkForFASTDC";
+		
+		BufferedReader br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		PrintWriter out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		String line = null;
+		int group = thisHead.split(",").length - 1;
+		String[] lines = new String[group];
+		int count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						sb.append(lines[i].split(",")[6]);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+		/**
+		 * Second Part: Measuring running time per minimal DC
+		 */
+		
+		setting = "fixNumTuples_VaryingNumPredicates_DFSTimePerMinimalDC" + "_" + round;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//thisHead = "NumOfPredicates,DFS Time(ms)ForFASTDC,DFS Time(ms)ForFASTDCImproved";
+		thisHead = "# Predicates,DFS Time Per DC(ms)ForFASTDC";
+		
+		br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		group = thisHead.split(",").length - 1;
+		lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						sb.append(lines[i].split(",")[5]);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+		/**
+		 * Third Part: Total Running Time
+		 */
+		
+		setting = "fixNumTuples_VaryingNumPredicates_TotalRunningTime" + "_" + round;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//thisHead = "NumOfPredicates,Running Time(s)ForFASTDC,Running Time(s)ForFASTDCImproved";
+		thisHead = "# Predicates,Running Time(s)ForFASTDC";
+		
+		br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		group = thisHead.split(",").length - 1;
+		lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						sb.append(lines[i].split(",")[3]);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+		/**
+		 * Fourth Part: Measuring running time per minimal DC
+		 */
+		
+		setting = "fixNumTuples_VaryingNumPredicates_NormalizedTimePerMinimalDC" + "_" + round;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//thisHead = "NumOfPredicates,DFS Time(ms)ForFASTDC,DFS Time(ms)ForFASTDCImproved";
+		thisHead = "# Predicates,Normalized Time(ms)ForFASTDC";
+		
+		br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		group = thisHead.split(",").length - 1;
+		lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						
+						int wastedWork = Double.valueOf(lines[i].split(",")[6]).intValue() + 1;
+						double dfstimeperdc = Double.valueOf(lines[i].split(",")[5]);
+						sb.append((double)dfstimeperdc / wastedWork);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+		/**
+		 * Fifth Part: # of minimal DCs
+		 */
+		
+		setting = "fixNumTuples_VaryingNumPredicates_NumMinimalDCs"  + "_" + round;;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//thisHead = "NumOfPredicates,DFS Time(ms)ForFASTDC,DFS Time(ms)ForFASTDCImproved";
+		thisHead = "# Predicates,Num Minimal DCsForFASTDC";
+		
+		br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		group = thisHead.split(",").length - 1;
+		lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						sb.append(lines[i].split(",")[7]);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+		
+		/**
+		 * sixth Part: # of minimal DCs
+		 */
+		
+		setting = "fixNumTuples_VaryingNumPredicates_DFSTime"  + "_" + round;;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//thisHead = "NumOfPredicates,DFS Time(ms)ForFASTDC,DFS Time(ms)ForFASTDCImproved";
+		thisHead = "# Predicates,DFS Time(s)ForFASTDC";
+		
+		br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		group = thisHead.split(",").length - 1;
+		lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						sb.append(lines[i].split(",")[9]);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+	}
+	
+	
+	/**
+	 * Compare FASTDC, FASTDC-DS, FASTDC-DO
+	 * @param dataset
+	 * @param round
+	 * @throws IOException
+	 */
+	public static void fixNumTuples_VaryingNumPredicates2(String dataset, int round, int numTuples) throws IOException
+	{
+		
+		//int numcols = 13;
+		ArrayList<Integer> cols = new ArrayList<Integer>();
+		ArrayList<Integer> remaining = new ArrayList<Integer>();
+		if(dataset.equals("TaxGenerator"))
+		{
+			remaining.add(0);
+			remaining.add(1);
+			//remaining.add(2);
+			remaining.add(3);
+			remaining.add(4);
+			remaining.add(5);
+			remaining.add(6);
+			remaining.add(7);
+			remaining.add(8);
+			remaining.add(9);
+			remaining.add(10);
+			remaining.add(11);
+			remaining.add(12);
+			//remaining.add(13);
+			remaining.add(14);
+		}
+		else if(dataset.equals("ExpHospital"))
+		{
+			for(int i = 0; i < 15; i++)
+				remaining.add(i);
+		}
+		else if(dataset.equals("SPStock"))
+		{
+			for(int i = 0; i < 7; i++)
+				remaining.add(i);
+		}
+		
+		
+		
+		
+		int step = 1;
+		int numCols = remaining.size();
+		//Step1: running the algorithm, writing the stats to ExpReport File
+		for(int i = 1; i <= numCols; i += step)
+		{
+			for(int k = 0 ; k < step; k++)
+			{
+				
+				int index = new Random().nextInt(remaining.size());
+				int cur = remaining.get(index);
+				cols.add(cur);
+				remaining.remove(index);
+				
+			}
+			
+			
+			//getInputDB(dataset,numTuples,i);
+			//ExpUtils.genInputDBRandomAttri(dataset,numTuples,cols);
+			ExpUtils.sampleInputDB(dataset, 114900, cols);
+			
+			ConstraintDiscovery cd;
+			
+			//FASTDC
+			Config.howInit = 1;
+			cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,1,numTuples);
+			cd.initHeavyWork(Config.howInit); cd.discover();
+			
+			
+			Config.howInit = 2;
+			//FASTDC-DS
+			cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,4,1,numTuples);
+			cd.initHeavyWork(Config.howInit); cd.discover();
+			
+			Config.howInit = 2;
+			//FASTDC-DO
+			cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,0,numTuples);
+			cd.initHeavyWork(Config.howInit); cd.discover();
+			
+			
+		}
+		
+		//Step2: Extract the relevant info from global stats info File, and put it in a local file
+		String setting = "fixNumTuples_VaryingNumPredicates_WastedWork" + "_" + round;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//String thisHead = "NumOfPredicates,Wasted WorkForFASTDC,Wasted WorkForFASTDCImproved";
+		String thisHead = "# Predicates,Wasted WorkForFASTDC,Wasted WorkForFASTDC-DS,Wasted WorkForFASTDC-DO";
+		
+		BufferedReader br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		PrintWriter out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		String line = null;
+		int group = thisHead.split(",").length - 1;
+		String[] lines = new String[group];
+		int count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						sb.append(lines[i].split(",")[6]);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+		/**
+		 * Second Part: Measuring running time per minimal DC
+		 */
+		
+		setting = "fixNumTuples_VaryingNumPredicates_DFSTimePerMinimalDC" + "_" + round;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//thisHead = "NumOfPredicates,DFS Time(ms)ForFASTDC,DFS Time(ms)ForFASTDCImproved";
+		thisHead = "# Predicates,DFS Time Per DC(ms)ForFASTDC,DFS Time Per DC(ms)ForFASTDC-DS,DFS Time Per DC(ms)ForFASTDC-DO";
+		
+		br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		group = thisHead.split(",").length - 1;
+		lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						sb.append(lines[i].split(",")[5]);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+		/**
+		 * Third Part: Total Running Time
+		 */
+		
+		setting = "fixNumTuples_VaryingNumPredicates_TotalRunningTime" + "_" + round;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//thisHead = "NumOfPredicates,Running Time(s)ForFASTDC,Running Time(s)ForFASTDCImproved";
+		thisHead = "# Predicates,Running Time(s)ForFASTDC,Running Time(s)ForFASTDC-DS,Running Time(s)ForFASTDC-DO";
+		
+		br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		group = thisHead.split(",").length - 1;
+		lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						if(i == 0)
+						{
+							sb.append(lines[i].split(",")[3]);
+						}
+						else
+						{
+							double time = Double.valueOf(lines[0].split(",")[8]) + Double.valueOf(lines[i].split(",")[3]);
+							sb.append(time);
+							
+						}
+						
+						
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+		/**
+		 * Fourth Part: Measuring running time per minimal DC
+		 */
+		
+		setting = "fixNumTuples_VaryingNumPredicates_NormalizedTimePerMinimalDC" + "_" + round;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//thisHead = "NumOfPredicates,DFS Time(ms)ForFASTDC,DFS Time(ms)ForFASTDCImproved";
+		thisHead = "# Predicates,Normalized Time(ms)ForFASTDC,Normalized Time(ms)ForFASTDC-DS,Normalized Time(ms)ForFASTDC-DO";
+		
+		br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		group = thisHead.split(",").length - 1;
+		lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						
+						int wastedWork = Double.valueOf(lines[i].split(",")[6]).intValue() + 1;
+						double dfstimeperdc = Double.valueOf(lines[i].split(",")[5]);
+						sb.append((double)dfstimeperdc / wastedWork);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+		/**
+		 * Fifth Part: # of minimal DCs
+		 */
+		
+		setting = "fixNumTuples_VaryingNumPredicates_NumMinimalDCs"  + "_" + round;;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//thisHead = "NumOfPredicates,DFS Time(ms)ForFASTDC,DFS Time(ms)ForFASTDCImproved";
+		thisHead = "# Predicates,Num Minimal DCsForFASTDC,Num Minimal DCsForFASTDC-DS,Num Minimal DCsForFASTDC-DO";
+		
+		br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		group = thisHead.split(",").length - 1;
+		lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						sb.append(lines[i].split(",")[7]);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+		
+		
+		
+		/**
+		 * sixth Part:DFS time
+		 */
+		
+		setting = "fixNumTuples_VaryingNumPredicates_DFSTime"  + "_" + round;;
+		//String thisHead = "NumOfCols,RunningTimeForDiscovery";
+		//thisHead = "NumOfPredicates,DFS Time(ms)ForFASTDC,DFS Time(ms)ForFASTDCImproved";
+		thisHead = "# Predicates,DFS Time(s)ForFASTDC,DFS Time(s)ForFASTDC-DS,DFS Time(s)ForFASTDC-DO";
+		
+		br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		group = thisHead.split(",").length - 1;
+		lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					//int numAttri = Integer.valueOf(lines[0].split(",")[2]) ;// / 1000;
+					//sb.append(numAttri);//number attributes
+					int numPres = Integer.valueOf(lines[0].split(",")[4]);
+					sb.append(numPres);
+					
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						sb.append(lines[i].split(",")[9]);
+						if(i != group -1)
+							sb.append(",");
+					}
+	
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+	}
+	
+	/**
+	 * taking the average of three files, and output into one file.
+	 * @param input
+	 * @param output
+	 * @throws IOException 
+	 */
+	public static void average(String dataset, Set<String> input, String output) throws IOException
+	{
+		
+		int numRows = 0;
+		int numCols = 0;
+		//init numRows, and numCols
+		for(String aa: input)
+		{
+			BufferedReader br = new BufferedReader(new FileReader(ExpUtils.getExpFolder(dataset) + "/" + aa + ".csv"));
+			int count = -1;
+			String line = null;
+			while((line = br.readLine())!=null)
+			{
+				if(count == -1)//first line is the head
+				{
+					numCols = line.split(",").length;
+					count++;
+					continue;
+				}
+				count++;
+				
+			}
+			br.close();
+			numRows = count;
+			break;
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		Map<String,double[][]> data = new HashMap<String,double[][]>();
+		
+		
+		String head = null;
+		
+		for(String aa: input)
+		{
+			double[][] temp = new double[numRows][numCols];
+			data.put(aa, temp);
+			BufferedReader br = new BufferedReader(new FileReader(ExpUtils.getExpFolder(dataset) + "/" + aa + ".csv"));
+			String line = null;
+			int count = -1;
+			while((line = br.readLine())!=null)
+			{
+				if(count == -1)//first line is the head
+				{
+					head = line;
+					count++;
+					continue;
+				}
+				String[] info = line.split(",");
+				for(int i = 0 ; i < info.length; i++)
+				{
+					temp[count][i] = Double.valueOf(info[i]);
+				}
+				count++;
+				
+			}
+			br.close();
+		}
+		
+		
+		double[][] ave = new double[numRows][numCols];
+		for(int i = 0; i < numRows; i++)
+			for(int j = 0; j < numCols; j++)
+			{
+				double sum = 0;
+				for(String a: input)
+					sum += data.get(a)[i][j];
+				ave[i][j] = sum / input.size();
+			}
+		
+		PrintWriter out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + output + ".csv"));
+		out.println(head);
+		for(int i = 0 ; i < numRows; i++)
+		{
+			StringBuilder sb = new StringBuilder();
+			for(int j = 0; j < numCols; j++)
+			{
+				sb.append(ave[i][j]);
+				if( j!= numCols - 1)
+					sb.append(",");
+				
+			}
+			out.println(sb);
+		}
+		out.close();
+		
+	}
+	
+	
+	
+	
+	
+	
+}

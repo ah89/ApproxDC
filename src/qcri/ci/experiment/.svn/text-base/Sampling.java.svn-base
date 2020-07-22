@@ -1,0 +1,303 @@
+package qcri.ci.experiment;
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.*;
+
+import qcri.ci.ConstraintDiscovery;
+import qcri.ci.instancedriven.ConstraintMining2;
+import qcri.ci.utils.Config;
+import qcri.ci.utils.FileUtil;
+
+public class Sampling {
+
+	/**
+	 * @param args
+	 * @throws IOException 
+	 */
+	public static void main(String[] args) throws IOException {
+		
+			String[] datasets = new String[] {
+				
+				//"ExpHospital",
+				//"TaxGenerator",
+				"SPStock"
+				
+				};
+
+			
+			FileUtil.clearExpReportCSVFile(ExpUtils.head);
+			int numRounds = 1;
+			for(String dataset: datasets)
+			{
+			
+				run(numRounds, dataset);
+				String averageFile = "Experiments/ExpReportAVG.CSV";
+				//average(numRounds,averageFile);
+				
+				//drawGraph(averageFile,dataset);
+			}
+		
+		
+	}
+
+	
+	public static void run(int numRounds, String dataset) throws IOException
+	{
+		//int[] numTupless = new int[]{1000,2000,4000,6000,8000,10000,15000,20000,30000,40000};
+		
+		//int[] numTupless = new int[]{60000,80000,100000,120000,140000};
+	
+		
+		//int[] numTupless = new int[]{30000,40000,50000};
+		int[] numTupless = new int[]{100};
+		
+		for(int numTuples:numTupless )
+		{
+			
+			for(int i = 0; i < numRounds; i++)
+			{
+				ArrayList<Integer> cols = new ArrayList<Integer>();
+				
+				if(dataset.equals("TaxGenerator"))
+				{
+					cols.add(0);
+					cols.add(1);
+					//cols.add(2);
+					cols.add(3);
+					cols.add(4);
+					cols.add(5);
+					cols.add(6);
+					cols.add(7);
+					cols.add(8);
+					cols.add(9);
+					cols.add(10);
+					cols.add(11);
+					cols.add(12);
+					//cols.add(13);
+					cols.add(14);
+				}
+				else if(dataset.equals("SPStock"))
+				{
+					for(int c = 0; c < 50; c++)
+						cols.add(c);
+				}
+				else if(dataset.equals("ExpHospital"))
+				{
+					for(int c = 0; c < 50; c++)
+						cols.add(c);
+				}
+				
+				
+				ExpUtils.sampleInputDB(dataset, 114900, cols);
+				
+				ConstraintDiscovery cd;
+			
+				Config.howInit = 1;
+				cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,0, numTuples);
+				cd.initHeavyWork(Config.howInit); cd.discover();
+			}
+			
+			
+		}
+	}
+	
+	//Taking the average of numRounds executions
+	public static void average(int numRounds, String averageFile) throws IOException
+	{
+		BufferedReader br = new BufferedReader(new FileReader("Experiments/ExpReport.CSV"));
+		PrintWriter out = new PrintWriter(new FileWriter(averageFile ));
+		
+		String[] lines = new String[numRounds];
+		String line = null;
+		int count = -1;
+		while((line = br.readLine()) != null)
+		{
+			if(count == -1)
+			{
+				count++;
+				out.println(line);
+				continue;
+			}
+			
+			if(count < numRounds )
+			{
+				lines[count] = line;
+				count++;
+				if(count == numRounds)
+				{
+					StringBuilder sb = new StringBuilder();
+					
+					int numCols = lines[0].split(",").length;
+					for(int i = 0; i < numCols; i++)
+					{
+						if(i == 0)
+						{
+							sb.append(lines[0].split(",")[i]);
+							sb.append(",");
+						}
+						else
+						{
+							double avg = 0;
+							for(String temp: lines)
+							{
+								avg += Double.valueOf(temp.split(",")[i]);
+								
+							}
+							avg = (double)avg / numRounds;
+							sb.append(avg);
+							
+							if(i != numCols - 1)
+								sb.append(",");
+						}
+					}
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		
+		
+		br.close();
+		out.close();
+	}
+	
+	public static void drawGraph(String averageFile,String dataset) throws IOException
+	{
+		//Read from average file, and output that to a csv for drawing
+		String setting = "sampling_precision";
+		String thisHead = "NumOfTuples,PrecisonForTop-5,PrecisonForTop-10,PrecisonForTop-15,PrecisonForTop-20";
+		
+		BufferedReader br = new BufferedReader(new FileReader(averageFile));
+		PrintWriter out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		String line = null;
+		//int group = thisHead.split(",").length - 1 -1;
+		//String[] lines = new String[group];
+		int count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			
+			if(!line.split(",")[0].equals(dataset))
+				continue;
+		
+			StringBuilder sb = new StringBuilder();
+			int numTuples = Double.valueOf(line.split(",")[1]).intValue() ;// / 1000;
+			sb.append(numTuples);//number tuples;
+			sb.append(",");
+			for(int i = 0 ; i < Config.numTopks; i++)
+			{
+				double precision = Double.valueOf(line.split(",")[10 + i * 2]);
+				
+				sb.append(precision);
+				if(i != Config.numTopks -1)
+					sb.append(",");
+			}
+			
+			out.println(sb);
+		
+		}
+		br.close();
+		out.close();
+		
+		
+		//Step 2: recall
+		//Read from average file, and output that to a csv for drawing
+		setting = "sampling_recall";
+		thisHead = "NumOfTuples,RecallForTop-5,RecallForTop-10,RecallForTop-15,RecallForTop-20";
+		
+		br = new BufferedReader(new FileReader(averageFile));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		//int group = thisHead.split(",").length - 1 -1;
+		//String[] lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			
+			if(!line.split(",")[0].equals(dataset))
+				continue;
+		
+			StringBuilder sb = new StringBuilder();
+			int numTuples = Double.valueOf(line.split(",")[1]).intValue() ;// / 1000;
+			sb.append(numTuples);//number tuples;
+			sb.append(",");
+			for(int i = 0 ; i < Config.numTopks; i++)
+			{
+				double precision = Double.valueOf(line.split(",")[11 + i * 2]);
+				
+				sb.append(precision);
+				if(i != Config.numTopks -1)
+					sb.append(",");
+			}
+			
+			out.println(sb);
+		
+		}
+		br.close();
+		out.close();
+		
+		
+		
+		//Step 3: F-1 Measure
+		
+		setting = "sampling_fmeasure";
+		thisHead = "NumOfTuples,F-MeasureForTop-5,F-MeasureForTop-10,F-MeasureForTop-15,F-MeasureForTop-20";
+		
+		br = new BufferedReader(new FileReader(averageFile));
+		out = new PrintWriter(new FileWriter(ExpUtils.getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		line = null;
+		//int group = thisHead.split(",").length - 1 -1;
+		//String[] lines = new String[group];
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			
+			if(!line.split(",")[0].equals(dataset))
+				continue;
+		
+			StringBuilder sb = new StringBuilder();
+			int numTuples = Double.valueOf(line.split(",")[1]).intValue() ;// / 1000;
+			sb.append(numTuples);//number tuples;
+			sb.append(",");
+			for(int i = 0 ; i < Config.numTopks; i++)
+			{
+				
+				double precision = Double.valueOf(line.split(",")[10 + i * 2]);
+				double recall = Double.valueOf(line.split(",")[11 + i * 2]);
+				double f =  (2 * precision * recall) / (precision + recall);
+				
+				sb.append(f);
+				if(i != Config.numTopks -1)
+					sb.append(",");
+			}
+			
+			out.println(sb);
+		
+		}
+		br.close();
+		out.close();
+	}
+}

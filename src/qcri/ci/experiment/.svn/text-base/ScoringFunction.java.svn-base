@@ -1,0 +1,342 @@
+package qcri.ci.experiment;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+
+import qcri.ci.ConstraintDiscovery;
+import qcri.ci.instancedriven.ConstraintMining2;
+import qcri.ci.utils.Config;
+import qcri.ci.utils.FileUtil;
+
+public class ScoringFunction {
+
+	/**
+	 * @param args
+	 * @throws IOException 
+	 */
+	public static void main(String[] args) throws IOException {
+		
+		
+		
+		String[] datasets = new String[] {
+				
+				"ExpHospital",
+				//"TaxGenerator",
+				//"SPStock"
+				
+				};
+		
+		for(String dataset: datasets)
+		{
+			ExpUtils.getInputDB(dataset, 100000, 20);
+			
+			
+			/*FileUtil.clearExpReportCSVFile(ExpUtils.head);
+			Config.sc = 0;
+			ConstraintDiscovery cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,1,10000);
+			cd.initHeavyWork(Config.howInit); cd.discover();
+			scoreingFuctionEval(dataset);*/
+			
+			for(int sc = 0 ; sc <=2; sc++)
+			{
+				
+				FileUtil.clearExpReportCSVFile(ExpUtils.head);
+				Config.sc = sc;
+				ConstraintDiscovery cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,1,10000);
+				cd.initHeavyWork(Config.howInit); cd.discover();
+				scoreingFuctionEval(dataset);
+			}
+		}
+		
+		
+	}
+	
+
+	
+	
+	public static void scoreingFuctionEval(String dataset) throws IOException
+	{
+		String sc = "Experiments/" + dataset + "/" + "scoringEval" +  + Config.sc + ".csv";
+		PrintWriter out = new PrintWriter(new FileWriter(sc));
+		String thisHead = "Top-k, ForG-Precision, ForG-Recall, ForG-F-Measure";
+		out.println(thisHead);
+		
+		BufferedReader br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		br.readLine();
+		String line = br.readLine();
+		br.close();
+		
+		
+		
+		
+		
+		for(int i = 0; i < Config.numTopks; i ++)
+		{
+			int index =  10 + i * 2;
+			
+			double precision = Double.valueOf(line.split(",")[index]);
+			double recall = Double.valueOf(line.split(",")[index+1]);
+			
+			double f = 2 * precision * recall / (precision + recall);
+			
+			int k = (i+1) * Config.grak;
+			
+			out.println(k + "," + precision + "," + recall + "," + f);
+		}
+		
+		out.close();
+		
+	}
+	
+	
+	
+	/*public static void SCTopkPrecision() throws IOException
+	{
+		
+	}
+	
+	
+	public static void comparePR(String dataset, int numGolden) throws IOException
+	{
+		
+		
+		
+		String beforeImp = "Experiments/" + dataset + "/" + "dcs_BeforeImp";
+		String AfterImp = "Experiments/" + dataset + "/" + "dcs_AfterImp";
+		String human = "Experiments/" + dataset + "/" + "dcs_Human";
+		
+		ArrayList<String> dcs_BeforeImp = new ArrayList<String>();
+		ArrayList<String> dcs_AfterImp = new ArrayList<String>();
+		ArrayList<String> dcs_Human = new ArrayList<String>();
+		
+		//Read from three DC sources
+		//Should we set a threshold?
+		double thre = 0;
+		
+		BufferedReader br = new BufferedReader(new FileReader(beforeImp));
+		String line = null;
+		int count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(Double.valueOf(line.split(":")[0]) > thre)
+				dcs_BeforeImp.add(line.split(":")[1]);
+		}
+		br.close();
+		
+		br = new BufferedReader(new FileReader(AfterImp));
+		line = null;
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(Double.valueOf(line.split(":")[0]) > thre)
+				dcs_AfterImp.add(line.split(":")[1]);
+		}
+		br.close();
+		
+		br = new BufferedReader(new FileReader(human));
+		line = null;
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			System.out.println(line);
+			if(Double.valueOf(line.split(":")[0]) > thre)
+				dcs_Human.add(line.split(":")[1]);
+		}
+		br.close();
+		
+		
+		int aaa = 0;
+		if(numGolden == 0)
+		{
+			aaa = dcs_Human.size();
+		}
+		else
+		{
+			aaa = numGolden;
+		}
+		
+		
+		
+		String prFile = "Experiments/" + dataset + "/" + "prBefore" +  + Config.sc + ".csv";
+		PrintWriter out = new PrintWriter(new FileWriter(prFile));
+		String thisHead = "Topk, ForG-Precision, ForG-Recall, ForG-F-Measure";
+		out.println(thisHead);
+		
+		PrintWriter out2 = new PrintWriter(new FileWriter("Experiments/" + dataset + "/" + "prAfter" + Config.sc  + ".csv"));
+		out2.println(thisHead);
+		
+		for(int k = 0 ; k < 4; k++)
+		{
+			int topk = (k+1) * 5;
+			double precision;
+			double recall;
+			int numCorrBefore = 0;
+			int numCorrAfter = 0;
+			for(int i = 0 ; i < topk; i++)
+			{
+				String curBefore = dcs_BeforeImp.get(i);
+				if(dcs_Human.contains(curBefore))
+				{
+					numCorrBefore++;
+				}
+				String curAfter = dcs_AfterImp.get(i);
+				if(dcs_Human.contains(curAfter))
+				{
+					numCorrAfter++;
+				}
+			}
+			precision = (double)numCorrBefore / topk;
+			recall = (double)numCorrBefore / aaa;
+					//dcs_BeforeImp.size();
+			double f = 2 * precision * recall / (precision + recall);
+			out.println(topk + "," + precision + "," + recall + "," + f);
+			
+			double pre2 = (double)numCorrAfter/ topk;
+			double recall2 = (double)numCorrAfter / aaa;
+			double f2 = 2 * pre2 * recall2 / (pre2 + recall2);
+			out2.println(topk + "," + pre2 + "," + recall2 + "," + f2);
+		}
+		out.close();
+		out2.close();
+		
+	}
+	
+	public static void compareTopkP(String dataset) throws IOException
+	{
+		String beforeImp = "Experiments/" + dataset + "/" + "dcs_BeforeImp";
+		String AfterImp = "Experiments/" + dataset + "/" + "dcs_AfterImp";
+		String human = "Experiments/" + dataset + "/" + "dcs_Human";
+		
+		ArrayList<String> dcs_BeforeImp = new ArrayList<String>();
+		ArrayList<String> dcs_AfterImp = new ArrayList<String>();
+		ArrayList<String> dcs_Human = new ArrayList<String>();
+		
+		//Read from three DC sources
+		//Should we set a threshold?
+		double thre = 0;
+		
+		BufferedReader br = new BufferedReader(new FileReader(beforeImp));
+		String line = null;
+		int count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(Double.valueOf(line.split(":")[0]) > thre)
+				dcs_BeforeImp.add(line.split(":")[1]);
+		}
+		br.close();
+		
+		br = new BufferedReader(new FileReader(AfterImp));
+		line = null;
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(Double.valueOf(line.split(":")[0]) > thre)
+				dcs_AfterImp.add(line.split(":")[1]);
+		}
+		br.close();
+		
+		br = new BufferedReader(new FileReader(human));
+		line = null;
+		count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(Double.valueOf(line.split(":")[0]) > thre)
+				dcs_Human.add(line.split(":")[1]);
+		}
+		br.close();
+		
+		String prFile = "Experiments/" + dataset + "/" + "pTopkBefore.csv";
+		PrintWriter out = new PrintWriter(new FileWriter(prFile));
+		String thisHead = "Topk, ForPrecision";
+		out.println(thisHead);
+		
+		PrintWriter out2 = new PrintWriter(new FileWriter("Experiments/" + dataset + "/" + "pTopkAfter.csv"));
+		out2.println(thisHead);
+		
+		for(int k = 0 ; k < 4; k++)
+		{
+			int topk = (k+1) * 5;
+			double precision;
+			double recall;
+			int numCorrBefore = 0;
+			int numCorrAfter = 0;
+			for(int i = 0 ; i < topk; i++)
+			{
+				String curBefore = dcs_BeforeImp.get(i);
+				if(dcs_Human.contains(curBefore))
+				{
+					numCorrBefore++;
+				}
+				String curAfter = dcs_AfterImp.get(i);
+				if(dcs_Human.contains(curAfter))
+				{
+					numCorrAfter++;
+				}
+			}
+			precision = (double)numCorrBefore / topk;
+			
+			out.println(topk + "," + precision );
+			
+			double pre2 = (double)numCorrAfter/ topk;
+			
+			out2.println(topk + "," + pre2 );
+		}
+		out.close();
+		out2.close();
+		
+	}*/
+	
+	/*public static void discoverDCs(String dataset)
+	{
+		getInputDB(dataset,1000000,14);
+		String head =  "Setting,NumOfTuples,NumOfAttrs,RunningTime,NumOfPres,DFSTimePerDC,WastedWork,NumMinimalDCs" +
+				"PrecisionTop5,RecallTop5" +  // 8, 9
+				"PrecisionTop10,RecallTop10" + // 10, 11
+				"PrecisionTop15,RecallTop15" + //12 ,13
+				"PrecisionTop20,RecallTop20"  // 14,15
+				; 
+		FileUtil.clearExpReportCSVFile(head);
+		
+		ConstraintDiscovery cd;
+		cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,1,10000);
+		cd.initHeavyWork(Config.howInit); cd.discover();
+	}*/
+	
+	
+	
+
+}

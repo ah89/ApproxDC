@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/db
+END
+Table.java
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/db/Table.java
+END
+MyConnection.java
+K 25
+svn:wc:ra_dav:version-url
+V 104
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/db/MyConnection.java
+END
+ColumnMapping.java
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/db/ColumnMapping.java
+END
+Tuple.java
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/db/Tuple.java
+END
+Cell.java
+K 25
+svn:wc:ra_dav:version-url
+V 96
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/db/Cell.java
+END

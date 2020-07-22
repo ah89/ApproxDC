@@ -1,0 +1,367 @@
+README
+
+----------------------
+
+1. All data should go into Experiments folder, each exp has its separate folder
+2. The input database file is named "inputDB"
+3. Program will produce a file called "predicateDB"
+4. Frequent itemset mining algorithm will produce frequentPredicates
+5. All tunable parameter goes into Config.java
+6. The output is a set of minimal DCs
+
+******************************************
+IMPORTANT:
+1. Need a way to assess the quality of derived DC
+	Maybe this is a good point where we need space pruning algorithm.
+2. Need an artificial dataset to carefully examine the behavior of the algorithm
+3. Threshold turning is another cirtical aspect
+
+*****************************************
+
+----------------------
+Oct 25: Build a working prototype!
+
+1. Build all the infrastructure
+2. Understand how apriori works, and how to plug in our itemsets, later can try out cfpgrowth
+3  In PredicateDB.java, now predicates can only do "=" and "!=", and attributes can only compare with same columns,
+	 and we forbid comparison of attributes within one tuple
+
+	 
+---------------------
+Oct 26: Build a naive algorithm for deriving DCs from frequent predicate set
+
+1. Make clear of what does frequent mean exactly?
+	Need examples to make it clear
+2. The derivation algorithm may be integrated with frequent itemset mining algorithm,
+	so study up Apriori and FP Growth algorithm
+	
+---------------------
+Oct 28: A Naive way of deriving DCs
+1. for not(P1,...Pn) to be a valid DC, 
+	all P1...Pi-1, Pi+1,...Pn should be frequent
+	P1,... Pn should not be frequent
+	Actually this is integrated with Apriori algorithm
+2. Elimination of trivial DCs
+	e.g. not(P1,!P1) is a trivial DC
+3. Elimination of not meaningful DCs
+
+---------------------
+Oct 29: Find Problems through exp
+
+1. Even for Hospital dataset with 19 attributes, Apriori algorithm is very slow
+	Try database with fewer number of attributes, and see if it can give reasonable result
+
+2. Try out FP-Growth algorithm, and it is much much faster than apriori.
+	So see if DC deriving algorithm can be integrated FPgrowth
+	(Not done yet, preliminary study shows can't, may need another step to drive that)
+	
+3. The difference between FPGrowth and CFPGrowth is CFP can define a minSupport for every item
+
+---------------------
+Oct 30: Find Problems through exp
+1. I tried Hospital dataset, there seems to be a lot of DCs with IQ, 
+	so i added another condition, which is there in a DC, the predicates can't all be IQ
+	Even so, we have a lot of redundancy
+	
+2. It seems like that we need a handcrafted dataset to test the resulting denial constraints
+	For DataGenerator1, it seems like we need to set miniSup to be very low for dcs to be found, or the other way to look at it is that the minisup 
+	should be set w.r.t. the cardinality of a particular predicate. 
+	e.g. minisup(EQ(t1.A,t2.A)) = |A| * percentage * n (n-1)
+	
+3. Start Implement space pruning algorithm
+--------------------
+
+Oct 31: Implement space pruning algorithm
+
+1. Why don't we just examine the DB, and list all the violating DCs, and the remaining ones are the ones that are valid
+	Because the input DB can be dirty, and we want the for a dc to hold, we just want its coverage to be above a threshold
+		
+2. In Table.java, finish the method "testDC"
+	in CFD pattern tableaux discovery, they use "support, confidence and parsimony"
+	Support: many matches
+	confidence: few violations
+3. In SpacePruning.java, enumerate all the space
+
+4. Implement rules in the space pruning
+	(NOT YET DONE, don't know what's the best way to implement)
+------------------
+Nov 1: Read papers to seek more intuitions
+1. Support: for CFD, # of tuples to match the antecedent
+	support(DC) = # of tuples that match all equality predicates/N
+   Confidence: many definitions, see CFD pattern tableaux discovery paper
+   	the smallest # of tuples to be removed to eliminate all violations
+   	Confidence(DC) = 1 - the smallest # of tuples to be removed to eliminate all violations / # of tuples that match all equality predicates
+   	
+
+-----------------
+Nov 2: 
+-----------------
+Nov 3:
+Question: how to measure the interestingness of a discovered DC
+Reference: Miller and Divesh
+1. in CFD case, there is pattern tuple, so we can count the the number of tuples that match the pattern tuple. 
+	in DC, there is no pattern tuple, how can we do the match?
+	Possible solution: count the number of paired tuples who match all equality predicates in DC / N^2
+
+	how about confidence?
+
+2. Keep in mind that the measure used for testing the validity of DC should support the correctness of three pruning rules
+	TO BE PROVEN
+
+---------------
+Nov4:
+What is missing in space pruning method?
+1. There seems to be two kinds of pruning criteria besides those axioms in the play
+	A: interestingness: a rule is interesting if it is statistically significant in some way and meaningful. But interestingness can only get you exact constraint
+	B: approximate: a rule is approximate if it does not hold on all data, meaning we allow certain percentage of violations of that rule
+2. A smart way to evaluate a candidate DC against DB
+	In FD/CFD discovery, they are using partition method to quickly verify.
+	In DC, currently we do that in a most naive way, which is for every two tuple, verify if DC violates or not
+	Possible solution:
+		for each predicate, maintain a list of satisfying tuple pairs
+		For a DC, if the intersecting set of all predicates is all the violations of that particular DC
+3. How to efficiently implement those axioms in space pruning, i.e. what data structure to use?
+
+What is missing in constraints mining method?
+1. Any other way to derive DC from frequency predicate besides the current one? 
+	Need to evaluate the goodness of current deriving algorithm?
+2. Get clear on what exactly does frequency mean? 
+	It is predicate dependent, and it should be derived from the profiling of the predicate
+3. A different data summary:
+	for each predicate, maintain the list, and see what can we do??
+------------------
+Nov 5:
+Experiment with AB. A->B, but B not ->A
+with Constraint mining, we get A->B
+With space pruning, coverage is supposed to tolerate noise, and it will prune B-A, but still get A->B
+				  , and interestingness should prune (TO BE DONE)
+				  	not(EQ(t1.B,t2.B),EQ(t1.A,t2.A) )
+					not(EQ(t1.A,t2.A) )
+For both cases, we have axioms to get a minimal cover....
+
+
+Directions:
+1. quality of discovered DCs
+	frequency: A: find a function mapping from profiling to frequency
+			   B: devise an algorithm to handle different frequency
+	deriving algorithm: current is most conservative 
+	interestingness: used in constraint mining as a post process, used in space pruning when evaluate each candidate
+2. efficiency:		   
+	evaluate a candidate DC against DB
+	axioms in space pruning
+-------------------
+Nov 6:
+Take direction 1:
+frequency: we have a naive frequency test
+examine the output:
+	whether a dc is expected
+	interestingness
+	consistency within the output, this is a very interesting discussion, but exps show that this really doesn't help very much!
+
+----------------
+Nov 7:
+Space pruning is extremely slow, find out why?
+	So the java profiling suggests that predicate.check() is taking a lot of time, and that getNumVios() is also taking a lot of time
+	so solution: use space to trade speed
+		1. no matter what, for each predicate, store the tuple pairs that it satisfies in a hashset
+		2. for each predicate, maintain a set of tuple pairs that have been checked, and update the set each time you encounter a new pair
+This is going to help, of course!
+
+
+Tyson frozen food database request is filed...
+
+interestingness of a DC constraints can be measured by the dependencies amongst predicates? 
+So now the question is how to define the dependencies?
+	
+Keep in mind the generality of space pruning (i.e. how does it include FD/CFD discovery)
+
+TODO List in descending order of importance
+1. Adding axioms to space pruning ( see how much gain do we get in efficiency)
+2. Define interestingness for DC 
+3. Get a clear idea of how FD did experiments by reading experiment sections of previous papers
+	specifically, what does it mean by scalability in terms of # of tuples, # of attributes
+4. Efficiency in data mining algorithm, i.e. is Apriori is the best shot? 
+	FP growth is better in finding frequent itemsets of course, but how about kFreK-1Not fre
+5. Need a DC experiment where predicate is not within a single column
+
+---------------
+Nov 8:
+Implement the space pruning method:
+noiseTolerance level has an effect on the result of the pruning rules
+I believe if noise tolerance = 0, then Rule 1,2,3 will not affect the result at all!
+with the increase of the noise tolerance, the more the rules, you will miss some dcs. But theose missed ones are not necessary good ones, 
+	however, the improvement in efficiency is substantial
+
+
+We should have another contribution to the paper...
+1. be better than other papers(FD/CFD)
+2. Have a constraint verification phase, data examples? user involvement? 
+3. Combine two approach, use either pruning rule/mining algo to complement each other, a hybrid approach
+4. Adding Constant...
+
+
+I have a problem with space! We are taking up too much space, storing for each predicate, the tuple pairs that it satisfy in memory
+
+
+Move to postgres!
+1. loading original table and predicateDB table into database is extremely slow, so use bulkload, looks like this method has failed!
+2. build index on all columns, this is very slow
+
+I now have the big data problem!
+In space pruning, if we don't store the evidence expclitly in DB, then every time we need to check a dc, we do the check. That is in essence, 
+space pruning is using time to trade for space
+
+In data mining, we need enough memory to store the entire evidence space, which can be too big, and then minig.
+
+there is going to be a problem for data mining, because the squared data is too big to fit into memory
+
+
+-----------
+Nov 9: 
+
+Think about the big data problem
+Now I use CSV file to load, it is still slow + building index is very slow + every validation is very slow(SQL query)
+Right now, i don't see any advantage of using Spacepruning1 >  space pruning 2 (Need discussion with Paolo)
+
+In Constraint Mining, if using Apriori algorithm, there is still a candidate generate and test process, what is the difference between 
+those two methods? If they are not different, we surly should consider a different algorithm, which is FP growth. 
+If using FPGrowth method, the compression is huge due to the FP tree. But the thing is now deriving algorithm is going to be harder, because 
+we don't have the advantage of integrating with mining algorithm...
+1. Switch to FP Growth algorithm to reduce memory to store the evidence...(invent a deriving algorithm)
+2. Stick to Apriori, but think of it as a big data problem, and use Map Reduce to solve the problem (study up)
+
+Our data is different from market basket data
+
+
+Think about the interestingness measure
+
+
+Thank about a more interesting dataset, where predicate is across columns
+
+-----
+Nov 10:
+
+Concern:
+There are actually existing algorithms for rare itemset mining, so our second approach seems to be direct applications of a data mining algorithm.
+Except we transform our database into a predicate database first. If we really want to make it stand out, then we need special techniques that make the mining
+in our case fast by exploiting the specific properties of items in our setting which include:
+1. # of items in our case is small, i.e. # of different predicates
+2. But the transaction is very large, due to squared, this makes storing them in memory infeasible. Need compressions (FP tree is a way)
+3. The # of items in each transaction is set to be #(P)/2, where #(P) is the number of predicates
+4. We want k non-frequent k-1 frequent itemset
+5. The items are not totally independent, this information can be exploited somehow.
+	For example, P and !P are mutually exclusive, #of evidence containing P + # of evidence containing !p = n(n-1)
+6. Our transactions database consist of pairwise checking of the original database, is there anything we can do to take advantage of that?
+
+-----
+Nov 11:
+Think about another contribution:
+1. A hybrid discovery... seem to be difficult at the moment
+2. The output of constraint discovery algorithm can have not only a set of denial constraints, but also for each dc, 
+	a set of possible repairs, ranking by the probability of applicability.
+	For a DC: not(P1,...,Pn), the output could include # of violations, and among them # of violations for each predicate.
+	for P1,...Pn, which one is more likely to be wrong
+	Then, the MVC could become the weighted MVC. 
+	Further, we can optimize the repairing algorithm
+	
+	suppose not(X,Y) is a valid DC found.
+	The repairing rules have a very similar structure to that of association rules. X=>Y
+	Actually is the called the repairing rule mining
+3. Interestingness of a DC	 
+---
+Nov 12,13:
+Revisit the theoretic foundation of DCs
+--
+
+Nov 15:
+Yet another constraint mining algorithm
+---
+Nov 18:
+Ensure the correctness of the second mining algorithm
+--
+Nov 20:
+Why the ordering matters so much? for UIS, if no dynamic ordering, it is taking forever
+
+
+---
+Nov 26:
+Dealing with constants, constant predicates are provided by the users now!
+
+How about predicates, such as EQ(t1.A,4), EQ(t2.B,2)
+---
+Nov 27:
+Adding approximate DC output, where approximate means that we allow a certain amout of violations.
+--
+Nov 28:
+Allow approximate DC output, 
+
+
+----
+Dec 10:
+javaplot in place, starting to run experiments.
+Seems like opimizaing FASTDC is an urgent task.
+Find reasons for all those scalability for different datasets.
+
+---
+Dec 23:
+Established that FASTFD with DFS is the way to go
+
+--
+Dec 24:
+Make Dynamic ordering work:
+Dynamic ordering coupled with effective pruning technique.
+
+--
+Dec 25: TODO List
+1. Post-Processing algorithm-revisited, implication testing is a linear algorithm
+	subset pruning and minimal cover are still hard to analyze
+2. Adding constants (frequent predicate mining algorithm)
+	the algorithm is done, but code needs to be examied about the correctness. 
+	Especially, the impilcation testing algorithm involving constants will need to change
+3. Finding datasets (tax data generator)
+
+
+----
+Dec 26: Find a good running example
+
+---
+Dec 27:
+Ensure, under a certain definition of minimal DCs, there is no subset pruning needed in the post-processing
+For order predicate, it is slow, but we try to remove >=,<=,!= for numerical values.
+--
+Dec 28:
+
+--
+Dec 29:
+Bug fix for linear implication testing algorithm. ----done
+Make three system extensions work:
+1. Adding constants
+	Elimination of trivial constant DCs, t1.A!=t2.A, t1.A=a,t2.A=a --- done
+2. Approximate version
+3. Cross columns
+4. Rank them by interestingness! ----done
+
+
+---
+Dec 30:
+Testing the correctness of the algorithm:
+	1. approximate version
+	2. adding constants
+		doing one pass of pair-wise comparisons, instead of several passes
+	3. cross columns
+		How should we decide if two columns are joinable
+	
+	
+Think about the current way of dealing with order predicate, why does it work
+
+---
+Jan 2:
+For each constant predicates, donnot re-do the pair wise comparison
+
+---
+Jan 3:
+I want to try a differnt way of dealing with constant predicates,
+
+--
+Jan 4:
+I have confirmed that wasted work 

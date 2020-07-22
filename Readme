@@ -1,0 +1,60 @@
+Three parameters input:
+1. The input DB path
+	The first line of the input DB is the schema
+2. The threshold for k-frequent itemset mining algorithm for constant predicates for constant DCs
+	Default is 0, which means no constant DC. 
+	Suggested value, to be at least 0.6
+3. The noise tolerance level for approximate DC discovery. 
+	Default is 0, which means exact DCs.
+	Suggested value, to be less than 0.4, depending on your confidence of the cleanness of the data
+	
+	
+	
+	
+	
+	
+---
+Distributed Version:
+
+
+setup environment:
+1,login to the cluster.qcri.org using username:yye, password: qcri123
+2,use qstat -n command in cluster.qcri.org to check if any machines have been assigned to yye
+3,if yes
+                then go to experiement
+  else
+                use qsub -I -V -q long -l walltime=10:00:00,nodes=:ppn=8
+                checkout using qstat -n which nodes have been allocated to yye.
+                go to configure environment step (assignednodes).
+
+
+
+configure environment step (assignednodes):
+0: SERVER_NODE_NAME=(select random one from assignednodes)
+1, go to directory: /data/yye/data/Distributed
+2, configure clients file (put assignednodes, one per line)
+3, configure server (put sERVER_NODE_NAME in the first line, make sure only one line in this file)
+4, configure server.properties file as follows:
+                servers=[assignednodes] (use comma to separate them)
+                registry=9001
+                rmiaddress=rmi://[SERVER_NODE_NAME]:9001/PredicateMatchService
+5, go to experiment
+
+
+experiment in distrubuted mode:
+1, export jar file
+2, put jar file into cluster.qcri.org:/home/yye/ConstraintInference/ConstraintInference.jar
+3, login to the cluster.qcri.org using credential username:yye, password:qcri123
+4, go to folder /home/yye/ConstraintInference
+5,  java -jar ConstraintInference.jar [ARGUMENTS] (make sure Config.howInit == 2)
+
+
+DFS time is in ms
+Init time is in s
+Total time is in s
+
+
+qsub -I -V -q long -l walltime=72:00:00,nodes=4:ppn=8
+
+
+tail -f xu

@@ -1,0 +1,101 @@
+package qcri.ci.generaldatastructure.db;
+
+
+/**
+ * This class should make it easier for users to express constraints using column names
+ * @author xchu
+ *
+ */
+public class ColumnMapping {
+
+	//Example: The input is A(Integer),B(String),C(Integer),D(String)
+	//columnNames should [0] = A, [1] = B, [2] = C, [3] =D
+	//columntypes should [0] = Integer, [1] = String, [2] = Integer, [3] = String 
+	private String columnHead;
+	private String[] columnNames;	//Map column names to column positions, columns positions are determined during initialization phase
+	
+	private int[] columnTypes;	//Map column names to column Types
+	
+	public ColumnMapping(String line)
+	{
+		init(line);
+	}
+	public  String getColumnHead()
+	{
+		return columnHead;
+	}
+	public  void init(String line)
+	{
+		columnHead = line;
+		String[] columns = line.split(",");
+		columnNames = new String[columns.length];
+		columnTypes = new int[columns.length];
+		for(int i = 0 ; i < columns.length; i++)
+		{
+			//System.out.println(columns[i]);
+			//System.out.println(columns[i].indexOf("("));
+			//System.out.println(columns[i].indexOf(")"));
+			//System.out.println(columns[i].substring(0, columns[i].indexOf("(")));
+			//System.out.println(columns[i].substring(columns[i].indexOf("(")+1,columns[i].indexOf(")")));
+			
+			if(!columns[i].contains("("))
+			{
+				columnNames[i] = columns[i];
+				columnTypes[i] = 2;
+			}
+			else
+			{
+				columnNames[i] = columns[i].substring(0, columns[i].indexOf("("));
+
+				String type = columns[i].substring(columns[i].indexOf("(")+1,columns[i].indexOf(")"));
+				if (type.equalsIgnoreCase("Integer"))
+					columnTypes[i] = 0;
+				else if (type.equalsIgnoreCase("Double"))
+					columnTypes[i] = 1;
+				else
+					columnTypes[i] = 2;
+			}
+			
+			
+			
+		}
+	}
+	/**
+	 * Mapping the column name to the column position, real position as user sees it, not the index position
+	 * @param name
+	 * @return
+	 */
+	public  int NametoPosition(String name)
+	{
+		for(int i =0 ; i < columnNames.length; i++)
+		{
+			if(columnNames[i].equalsIgnoreCase(name))
+				return (i+1);
+		}
+		
+		System.out.println("Invalid Column Name " + name);
+		return 0; //there is no such column
+	}
+	
+	public  int NametoType(String name)
+	{
+		int pos = NametoPosition(name);
+		
+		return columnTypes[pos-1];
+		
+	}
+	public String posiionToName(int pos)
+	{
+		return columnNames[pos-1];
+	}
+	
+	public int positionToType(int pos)
+	{
+		return columnTypes[pos-1];
+	}
+	
+	public  String[] getColumnNames()
+	{
+		return columnNames;
+	}
+}

@@ -1,0 +1,6 @@
+NumOfTuples,Running Time(m)ForOne shot,Running Time(m)ForDivide
+5000,69,6
+10000,143,12
+15000,215,17
+20000,217,22
+25000,253,28

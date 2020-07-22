@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 95
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/constraints
+END
+StaticAnalysis.java
+K 25
+svn:wc:ra_dav:version-url
+V 115
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/constraints/StaticAnalysis.java
+END
+DBProfiler.java
+K 25
+svn:wc:ra_dav:version-url
+V 111
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/constraints/DBProfiler.java
+END
+Predicate.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/constraints/Predicate.java
+END
+DenialConstraint.java
+K 25
+svn:wc:ra_dav:version-url
+V 117
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/generaldatastructure/constraints/DenialConstraint.java
+END

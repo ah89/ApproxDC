@@ -1,0 +1,228 @@
+package qcri.ci.experiment;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+
+import qcri.ci.ConstraintDiscovery;
+import qcri.ci.instancedriven.ConstraintMining2;
+import qcri.ci.utils.Config;
+import qcri.ci.utils.FileUtil;
+
+public class Cluster {
+
+	/**
+	 * @param args
+	 * @throws IOException 
+	 */
+	public static void main(String[] args) throws IOException {
+		
+		
+		
+		//String dataset = "TaxGenerator";
+		//String dataset = "ExpHospital";
+		String[] datasets = new String[] {
+				
+										//"ExpHospital",
+										"TaxGenerator",
+										//"SPStock"
+										
+										};
+		
+	
+		FileUtil.clearExpReportCSVFile(ExpUtils.head);
+		for(String dataset: datasets)
+		{
+			
+			//Config.qua = 0; //no opt
+			//cluster_VaryingNumTuple(dataset);
+			
+			Config.qua = 1; //opt
+			cluster_VaryingNumTuple(dataset);
+			
+			
+			//drawGraph(dataset);
+		}
+		
+	
+	}
+	public static void cluster_VaryingNumTuple(String dataset) throws IOException
+	{
+
+		
+		Config.enableCrossColumn = false;
+		
+		int numCols = 20;
+		//Step1: running the algorithm, writing the stats to ExpReport File
+		for(int i = 0 ; i < 1; i += 1)
+		{
+			int numTuples = (i+1) * 10000;
+			
+			
+			ArrayList<Integer> cols = new ArrayList<Integer>();
+			cols.add(0);
+			cols.add(1);
+			cols.add(2);
+			cols.add(3);
+			cols.add(4);
+			cols.add(5);
+			cols.add(6);
+			cols.add(7);
+			cols.add(8);
+			cols.add(9);
+			cols.add(10);
+			cols.add(11);
+		
+			cols.add(13);
+			
+			
+			genInputDBRandomAttri(dataset,Integer.MAX_VALUE,cols);
+			
+			
+			
+			//getInputDB(dataset,Integer.MAX_VALUE,numCols);
+			
+			ConstraintDiscovery cd;
+			//Single machine, non-parallel
+			//Config.howInit = 0;
+			//cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,1);
+			//cd.initHeavyWork(Config.howInit); cd.discover();
+			
+			//Single machine, parallel
+			Config.howInit = 1;
+			cd = new ConstraintMining2("Experiments/" + dataset + "/" + "inputDB",1,3,1, numTuples);
+			cd.initHeavyWork(Config.howInit); cd.discover();
+			
+		}
+		
+		
+	}
+	
+	static boolean fakeCluster = true;
+	public static void drawGraph(String dataset) throws IOException
+	{
+		String setting = "parallel_VaryingNumTuple_RunningTime";
+		String thisHead = "NumOfTuples,Running Time(m)ForNon-Parallel,Running Time(m)ForParallel";
+		
+		BufferedReader br = new BufferedReader(new FileReader("Experiments/ExpReport.csv"));
+		PrintWriter out = new PrintWriter(new FileWriter(getExpFolder(dataset) + "/" + setting + ".csv" ));
+		out.println(thisHead);
+		String line = null;
+		int group = thisHead.split(",").length - 1 -1;
+		String[] lines = new String[group];
+		int count = -1;
+		while((line = br.readLine())!=null)
+		{
+			if(count == -1)//first line is the head
+			{
+				count++;
+				continue;
+			}
+			if(count < group )
+			{
+				lines[count] = line;
+				count++;
+				if(count == group)
+				{
+					StringBuilder sb = new StringBuilder();
+					int numTuples = Integer.valueOf(lines[0].split(",")[1]) ;// / 1000;
+					sb.append(numTuples);//number tuples;
+					sb.append(",");
+					
+					for(int i = 0 ; i < group; i++)
+					{
+						int timeForNonParallel = Integer.valueOf(lines[i].split(",")[3]);
+						 timeForNonParallel /= 60;
+						sb.append(timeForNonParallel);
+						if(i != group -1)
+							sb.append(",");
+					}
+					
+					if(fakeCluster)
+					{
+						String[] temp = lines[0].split(",");
+						int tupleInit = Integer.valueOf(temp[8]);
+						int dfs = Integer.valueOf(temp[9]) / 1000;
+						int timeForParallel = tupleInit / 4 + dfs;
+						timeForParallel /= 60;
+						sb.append(",");
+						sb.append(timeForParallel);
+					}
+					
+					
+					out.println(sb);
+					count = 0;
+				}
+				
+			}
+		}
+		br.close();
+		out.close();
+	}
+	
+	public static void getInputDB(String dataset, int numTuples, int numAttri)
+	{
+		//include the header
+		String srcFile = "Experiments/" + dataset + "/" + "inputDBAll";
+		String desFile = "Experiments/" + dataset + "/" + "inputDB";
+		try {
+			qcri.ci.utils.FileUtil.firstKTuples(srcFile, desFile, numTuples,numAttri);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	
+	}
+	public static void genInputDBRandomAttri(String dataset, int numTuples, ArrayList<Integer> whichAttrs) throws IOException
+	{
+		
+		String srcFile = "Experiments/" + dataset + "/" + "inputDBAll";
+		String desFile = "Experiments/" + dataset + "/" + "inputDB";
+		
+		
+		BufferedReader br = new BufferedReader(new FileReader(srcFile));
+		PrintWriter out = new PrintWriter(new FileWriter(desFile));
+		
+		
+		int count = -1;
+		String line = null;
+		int numAttri = whichAttrs.size();
+		
+		while((line = br.readLine())!=null)
+		{
+			if(count <= numTuples)
+			{
+				if(numAttri == -1)
+					out.println(line);
+				else
+				{
+					
+					String[] temp = line.split(",");
+					StringBuilder sb = new StringBuilder();
+					if(numAttri > temp.length)
+						numAttri = temp.length;
+					for(int i = 0 ; i < numAttri; i++)
+					{
+						sb.append(temp[whichAttrs.get(i)]);
+						if(i != numAttri -1)
+							sb.append(",");
+					}
+					out.println(sb);
+					
+				}
+				count++;
+			}
+		}
+		br.close();
+		out.close();
+	}
+	public static String getExpFolder(String dataset)
+	{
+		return "Experiments/" + dataset + "/";
+	}
+
+}

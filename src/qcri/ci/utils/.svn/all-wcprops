@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/utils
+END
+FileUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/utils/FileUtil.java
+END
+PermutationGenerator.java
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/utils/PermutationGenerator.java
+END
+DisplayTable.java
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/utils/DisplayTable.java
+END
+MyPlotInfo.java
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/utils/MyPlotInfo.java
+END
+OperatorMapping.java
+K 25
+svn:wc:ra_dav:version-url
+V 89
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/utils/OperatorMapping.java
+END
+CombinationGenerator.java
+K 25
+svn:wc:ra_dav:version-url
+V 94
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/utils/CombinationGenerator.java
+END
+CombinationGeneratorWithOrder.java
+K 25
+svn:wc:ra_dav:version-url
+V 103
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/utils/CombinationGeneratorWithOrder.java
+END
+Similarity.java
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/utils/Similarity.java
+END
+Config.java
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/da/!svn/ver/830/Projects/ConstraintsInference/src/qcri/ci/utils/Config.java
+END
