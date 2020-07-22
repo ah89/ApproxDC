@@ -1,1 +1,16 @@
 
+This code is the implemntation of the "Approximate Denial Constraint" published in VLDB2020
+https://arxiv.org/pdf/2005.08540.pdf
+
+You can cite 
+
+@article{livshits2020approximate,
+  title={Approximate Denial Constraints},
+  author={Livshits, Ester and Heidari, Alireza and Ilyas, Ihab F and Kimelfeld, Benny},
+  journal={arXiv preprint arXiv:2005.08540},
+  year={2020}
+}
+
+
+
+
